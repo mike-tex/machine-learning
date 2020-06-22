@@ -201,78 +201,147 @@ max(accuracy$test)
 # with the F_meas() function using the default value 
 # of the relevant argument.
 
-rm(list = ls())
+.rs.restartR(afterRestartCommand = rm(list = ls()))
+# rm(list = ls())
 
 library(tidyverse)
-library(dslabs)
 library(caret)
+library(dslabs)
 data(heights)
-y <- heights$sex
-set.seed(1)
-set.seed(1, sample.kind = "Roundng")
+# set.seed(1)
+set.seed(1, sample.kind = "Rounding")
 idx <- 
-  createDataPartition(y, times = 1, p = 0.5, list = FALSE)
+  createDataPartition(heights$sex, times = 1, p = 0.5, list = F)
 test_set <- heights[idx,]
 train_set <- heights[-idx,]
 ks <- seq(1, 101, 3)
-set.seed(1)
 F_1 <- map_dbl(ks, function(k){
   fit <- knn3(sex ~ height, data = train_set, k = k)
-  y_hat <- predict(fit, test_set, type = "class") # %>% 
-    # factor(levels = levels(test_set$sex))
-  F_meas(data = y_hat, reference = factor(test_set$sex))
+  y_hat <- predict(fit, test_set, type = "class") 
+  F_meas(data = y_hat, reference = factor(test_set$sex)) 
 })
 
 plot(ks, F_1)
 
 # What is the max value of F_1?
 max(F_1)  
-# 0.6331658 # NO
-# [1] 0.6122449 # NO
-# [1] 0.6268657 # NO
 # [1] 0.6 ### YES!!!!!!
+# [1] 0.6019417 ## is the correct answer, lucky/unlucky it took .6
 
 # At what value of k does the max occur?
 # If there are multiple values of k 
 # with the maximum value, report the smallest such k.
 
 ks[which.max(F_1)]
-# [1] 1 # NO
-# 40 # NO
+# [1] 46 ### YES!!!!!!!!!!!!!!
 
 
+# Explanation from the site
+
+## This exercise can be accomplished using the following code:
+  
+library(dslabs)
+library(tidyverse)
+library(caret)
+data("heights")
+
+# set.seed(1)
+set.seed(1, sample.kind = "Rounding")
+test_index <- createDataPartition(heights$sex, times = 1, p = 0.5, list = FALSE)
+test_set <- heights[test_index, ]
+train_set <- heights[-test_index, ]     
+
+ks <- seq(1, 101, 3)
+F_1 <- sapply(ks, function(k){
+  fit <- knn3(sex ~ height, data = train_set, k = k)
+  y_hat <- predict(fit, test_set, type = "class") %>% 
+    factor(levels = levels(train_set$sex))
+  F_meas(data = y_hat, reference = test_set$sex)
+})
+plot(ks, F_1)
+max(F_1)
+ks[which.max(F_1)]
+
+# using set.seed(1), get the WRONG answer:
+# > max(F_1)
+# [1] 0.619469
+# > ks[which.max(F_1)]
+# [1] 40
+# > 
+
+# using set.seed(1, sample.kind = "Rounding"), get RIGHT answer:
+# > max(F_1)
+# [1] 0.6019417
+# > ks[which.max(F_1)]
+# [1] 46
+# > 
 
 
+## Q2
+# Next we will use the same gene expression example 
+# used in the Comprehension Check: Distance exercises. 
+# You can load it like this:
+
+rm(list = ls())
+
+library(tidyverse)
+library(dslabs)
+library(caret)
+data("tissue_gene_expression")
+
+# First, set the seed to 1 and split the data 
+# into training and test sets. Then, report the accuracy 
+# you obtain from predicting tissue type using KNN 
+# with k = 1, 3, 5, 7, 9, 11 using sapply() or map_df(). 
+# Note: use the createDataPartition() function outside of 
+# sapply() or map_df().
+
+set.seed(1, sample.kind = "Rounding")
+idx <- createDataPartition(
+  tissue_gene_expression$y, times = 1, p = 0.5, list = F)
+test_set <- list(x = tissue_gene_expression$x[idx,], 
+                 y = tissue_gene_expression$y[idx])
+train_set <- list(x = tissue_gene_expression$x[-idx,], 
+                 y = tissue_gene_expression$y[-idx])
+ks <- c(1, 3, 5, 7, 9, 11)
+
+accuracy <- map_df(ks, function(k) {
+  fit <- knn3(y ~ x, data = train_set, k = k)
+  y_hat <- predict(fit, test_set, type = "class")
+  cm <- confusionMatrix(data = y_hat,
+                        reference = test_set$y)
+  tibble(k = k, cm = cm$overall["Accuracy"])
+})
+
+accuracy
+
+# # A tibble: 6 x 2
+#       k    cm
+#     <dbl> <dbl>
+# 1     1   0.990
+# 2     3   0.969
+# 3     5   0.948
+# 4     7   0.917
+# 5     9   0.917
+# 6    11   0.906
+# 
 
 
+# Explanation from web site
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# This exercise can be accomplished using the following code:
+  
+set.seed(1)
+library(caret)
+y <- tissue_gene_expression$y
+x <- tissue_gene_expression$x
+test_index <- createDataPartition(y, list = FALSE)
+sapply(seq(1, 11, 2), function(k){
+  fit <- knn3(x[-test_index,], y[-test_index], k = k)
+  y_hat <- predict(fit, newdata = data.frame(x=x[test_index,]),
+                   type = "class")
+  mean(y_hat == y[test_index])
+})
 
 
 
