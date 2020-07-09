@@ -282,6 +282,12 @@ fit_qda$results["Accuracy"]
 # Accuracy
 # 0.8147954
 
+# Explanation
+# The following code can be used to estimate 
+# the accuracy of QDA:
+  
+fit_qda <- train(x, y, method = "qda")
+fit_qda$results["Accuracy"]
 
 ## Q4
 # Which TWO genes drive the algorithm when using QDA 
@@ -340,25 +346,38 @@ x <- tissue_gene_expression$x[ind, ]
 x <- x[, sample(ncol(x), 10)]
 
 
-fit_lda <- train(x, y, method = "lda", preProcess = "center")
-fit_lda$results["Accuracy"]
+fit_lda_pp <- train(x, y, method = "lda", preProcess = "center")
+fit_lda_pp$results["Accuracy"]
 
 fit_lda$finalModel
 
 library(dplyr)
 # Q2 plot
-t(fit_lda$finalModel$means) %>% data.frame() %>%
+t(fit_lda_pp$finalModel$means) %>% data.frame() %>%
   mutate(predictor_name = rownames(.)) %>%
   ggplot(aes(cerebellum, hippocampus, label = predictor_name)) +
   geom_point() +
   geom_text() +
   geom_abline()
 
-t(fit_lda$finalModel$means) %>% data.frame() %>%
+t(fit_lda_pp$finalModel$means) %>% data.frame() %>%
   mutate(predictor_name = rownames(.)) %>%
   ggplot(aes(cerebellum, hippocampus, color = predictor_name)) +
   geom_point() +
   geom_abline()
+
+# NickBova: I plotted predictor_name on the x axis 
+# and (scaled) means on the y
+t(fit_lda_pp$finalModel$means) %>% data.frame() %>%
+  mutate(tissue_names = names(.))
+  mutate(predictor_name = rownames(.)) %>%
+  ggplot(aes(x = predictor_name, label = tissue)) +
+  geom_point() +
+  geom_text() +
+  geom_abline()
+
+varImp(fit_lda_pp)
+
 
 temp1 <- fit_lda$finalModel$means %>% data.frame() %>% t() 
 temp1
@@ -392,7 +411,36 @@ temp4 %>% arrange(cere_error, hippo_error)
 # above partially correct
 
 # RAB1B ## correct
-# OAZ2 ## wrong
+# OAZ2 ## right! but it showed wrong when I selected it!
+
+# Explanation
+# The following code can be used to make the plot to evaluate which genes are driving the algorithm after scaling:
+  
+  fit_lda <- train(x, y, method = "lda", preProcess = "center")
+fit_lda$results["Accuracy"]
+t(fit_lda$finalModel$means) %>% data.frame() %>%
+  mutate(predictor_name = rownames(.)) %>%
+  ggplot(aes(predictor_name, hippocampus)) +
+  geom_point() +
+  coord_flip()
+
+# You can see that it is different genes driving 
+# the algorithm now. This is because the predictor 
+# means change.
+# 
+# In the previous exercises we saw that both LDA 
+# and QDA approaches worked well. For further exploration 
+# of the data, you can plot the predictor values 
+# for the two genes with the largest differences between 
+# the two groups in a scatter plot to see how they appear 
+# to follow a bivariate distribution as assumed 
+# by the LDA and QDA approaches, coloring the points 
+# by the outcome, using the following code:
+  
+d <- apply(fit_lda$finalModel$means, 2, diff)
+ind <- order(abs(d), decreasing = TRUE)[1:2]
+plot(x[, ind], col = y)
+
 
 
 ## Q6

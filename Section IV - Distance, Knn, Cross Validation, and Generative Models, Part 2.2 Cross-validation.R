@@ -212,19 +212,12 @@ q_75_star <- sapply(indexes, function(ind){
 mean(q_75_star)
 sd(q_75_star)
 
+# Expected value
 # > mean(q_75_star)
 # [1] 0.6737512  ## YES!!!
+# Standard error
 # > sd(q_75_star)
 # [1] 0.0930575  ## YES!!!
-
-# Expected value
-# 
-# unanswered  
-# 
-# Standard error
-# 
-# 
-
 
 ## Q6
 # When doing bootstrap sampling, the simulated samples are

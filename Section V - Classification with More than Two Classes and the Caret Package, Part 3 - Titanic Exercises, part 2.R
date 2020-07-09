@@ -183,67 +183,268 @@ confusionMatrix(data = y_hat,
 # use 10-fold cross-validation where each partition 
 # consists of 10% of the total.
 
-set.seed(8, sample.kind = "Rounding")
-train_knn <- 
-  train(Survived ~ ., 
-        method = "knn", 
-        data = train_set, 
-        tuneGrid = data.frame(k = seq(3, 51, 2)))
-y_hat <- predict(train_glm, test_set)
-confusionMatrix(data = y_hat, 
-                reference = test_set$Survived)$overall["Accuracy"]
+getModelInfo("knn")
+modelLookup("knn")
 
+control <- trainControl(method = "cv", number = 10, p = .9)
+
+set.seed(8, sample.kind = "Rounding")
+train_knn <-
+  train(
+    Survived ~ .,
+    method = "knn",
+    data = train_set,
+    tuneGrid = data.frame(k = seq(3, 51, 2)),
+    trControl = control
+  )
 
 # Try tuning with k = seq(3, 51, 2). What is the optimal value 
 # of k using cross-validation?
 
 train_knn$bestTune 
+#   k
+# 3 5
+
+# Explanation from the course web site:
+# The optimal value of k can be found using the following code:
+  
+#set.seed(8)
+set.seed(8, sample.kind = "Rounding")    # simulate R 3.5
+train_knn_cv <- train(Survived ~ .,
+                      method = "knn",
+                      data = train_set,
+                      tuneGrid = data.frame(k = seq(3, 51, 2)),
+                      trControl = trainControl(method = "cv", number = 10, p = 0.9))
+train_knn_cv$bestTune
 
 
+# What is the accuracy on the test set 
+# using the cross-validated kNN model?
 
 
+y_hat <- predict(train_knn, test_set)
+confusionMatrix(data = y_hat, 
+                reference = test_set$Survived)$overall["Accuracy"]
+# Accuracy 
+# 0.648  #  the correct answer is: 0.737 or 0.648
+
+# Explanation from the course web site
+# The accuracy can be calculated using the following code:
+  
+knn_cv_preds <- predict(train_knn_cv, test_set)
+mean(knn_cv_preds == test_set$Survived)
 
 
+# Question 11a: Classification tree model
+# Set the seed to 10. Use caret to train a decision tree 
+# with the rpart method. Tune the complexity parameter 
+# with cp = seq(0, 0.05, 0.002).
+
+set.seed(10, sample.kind = "Rounding")    # simulate R 3.5
+train_rpart <- train(Survived ~ .,
+                      method = "rpart",
+                      data = train_set,
+                      tuneGrid = data.frame(cp = seq(0, 0.05, 0.002))
+                     )
+
+# fit_rpart <- with(tissue_gene_expression, 
+#           train(x, y, method = "rpart",
+#                 control = rpart.control(minsplit = 0),
+#                 tuneGrid = data.frame(cp = seq(0, 0.1, 0.01))))
+# 
 
 
+# 
+# What is the optimal value of the complexity parameter (cp)?
+train_rpart$bestTune
+#     cp
+# 9 0.016
+
+# Explanation
+# The optimal value of cp can be found using the following code:
+  
+#set.seed(10)
+set.seed(10, sample.kind = "Rounding")    # simulate R 3.5
+train_rpart <- train(Survived ~ ., 
+                     method = "rpart",
+                     tuneGrid = data.frame(cp = seq(0, 0.05, 0.002)),
+                     data = train_set)
+train_rpart$bestTune
 
 
+# What is the accuracy of the decision tree model 
+# on the test set?
+y_hat <- predict(train_rpart, test_set)
+confusionMatrix(data = y_hat, 
+                reference = test_set$Survived)$overall["Accuracy"]
+# Accuracy 
+# 0.838
+
+# Explanation
+# The accuracy can be calculated using the following code:
+  
+rpart_preds <- predict(train_rpart, test_set)
+mean(rpart_preds == test_set$Survived)
 
 
+# Question 11b: Classification tree model
+# Inspect the final model and plot the decision tree.
+
+train_rpart$finalModel
+
+plot(train_rpart$finalModel)
+text(train_rpart$finalModel)
+
+# Which variables are used in the decision tree?
+#   Select ALL that apply.
+mean(test_set$Survived[test_set$Sex == "male"] == 1)
+mean(test_set$Survived[test_set$Sex == "male" &
+                         test_set$Age < 3.5] == 1)
+mean(test_set$Survived[test_set$Sex == "female"] == 1)
 
 
+# A 28-year-old male
+mean(test_set$Survived[test_set$Sex == "male" & 
+       test_set$Age >= 3.5] == 1)
+# [1] 0.145
+
+# A female in the second passenger class
+mean(test_set$Survived[test_set$Sex == "female" & 
+                         test_set$Pclass <= 2.5] == 1)
+# [1] 0.974
+
+# A third-class female who paid a fare of $8
+mean(test_set$Survived[test_set$Sex == "female" & 
+                         test_set$Pclass >= 2.5 &
+                         test_set$Fare <= 23.35] == 1)
+# [1] 0.565
+# per tree, yes
+
+# A 5-year-old male with 4 siblings
+mean(test_set$Survived[test_set$Sex == "male" & 
+                         test_set$SibSp == 4 &
+                         test_set$Age >= 3.5] == 1)
+# [1] 0
+
+# A third-class female who paid a fare of $25
+mean(test_set$Survived[test_set$Sex == "female" & 
+                         test_set$Fare >= 23.35] == 1)
+# [1] 0.886
+# per tree, would not survive
+
+# A first-class 17-year-old female with 2 siblings
+mean(test_set$Survived[test_set$Sex == "female" & 
+                         test_set$Pclass <= 2.5 &
+                         test_set$SibSp == 2 &
+                         test_set$Age >= 3.5] == 1)
+
+# A first-class 17-year-old male with 2 siblings
+mean(test_set$Survived[test_set$Sex == "male" & 
+                         test_set$Age >= 3.5 & 
+                         test_set$Pclass <= 2.5 &
+                         test_set$SibSp == 2] == 1)
+# [1] 0
 
 
+# Answers from course web site:
+# A 28-year-old male
+# correct  would NOT survive
+# A female in the second passenger class
+# correct  would survive
+# A third-class female who paid a fare of $8
+# correct  would survive
+# A 5-year-old male with 4 siblings
+# correct  would NOT survive
+# A third-class female who paid a fare of $25
+# correct  would NOT survive
+# A first-class 17-year-old female with 2 siblings
+# correct  would survive
+# A first-class 17-year-old male with 2 siblings
+# correct  would NOT survive
+# Explanation
+# For each case, follow the decision tree to determine 
+# whether it results in survived=0 (didn't survive) 
+# or survived=1 (did survive).
 
 
+# Question 12: Random forest model
+# Set the seed to 14. Use the caret train() function 
+# with the rf method to train a random forest. 
+# Test values of mtry ranging from 1 to 7. Set ntree to 100.
+# 
+set.seed(14, sample.kind = "Rounding")    # simulate R 3.5
+train_rf <- train(
+  Survived ~ .,
+  method = "rf",
+  data = train_set,
+  tuneGrid =
+    data.frame(mtry = seq(1, 7, 1)),
+  ntree = 100
+)
 
 
+# What mtry value maximizes accuracy?
+train_rf$bestTune
+#     mtry
+# 2    2
 
+# What is the accuracy of the random forest model 
+# on the test set?
+y_hat <- predict(train_rf, test_set)
+confusionMatrix(data = y_hat, 
+                reference = test_set$Survived)$overall["Accuracy"]
+# Accuracy 
+# 0.844 
 
+# Use varImp() on the random forest model object 
+# to determine the importance of various predictors 
+# to the random forest model.
+# 
+# What is the most important variable?
+varImp(train_rf)$importance
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Answers / explanation from the course web site:
+# What mtry value maximizes accuracy?
+#   
+#   2
+# correct  3 or 2
+# 2 
+# Explanation
+# 
+# The mtry value can be calculated using the following code:
+#   
+#   #set.seed(14)
+#   set.seed(14, sample.kind = "Rounding")    # simulate R 3.5
+# train_rf <- train(Survived ~ .,
+#                   data = train_set,
+#                   method = "rf",
+#                   ntree = 100,
+#                   tuneGrid = data.frame(mtry = seq(1:7)))
+# train_rf$bestTune
+# What is the accuracy of the random forest model on the test set?
+#   
+#   0.844
+# correct  0.877 or 0.844
+# 0.844 
+# Explanation
+# 
+# The accuracy can be calculated using the following code:
+#   
+#   rf_preds <- predict(train_rf, test_set)
+# mean(rf_preds == test_set$Survived)
+# Use varImp() on the random forest model object to determine the importance of various predictors to the random forest model.
+# 
+# What is the most important variable?
+#   Be sure to report the variable name exactly as it appears in the code.
+# 
+# 
+# Sexmale
+# correct  Sexmale
+# Explanation
+# 
+# The most important variable can be found using the following code:
+#   
+#   varImp(train_rf)    # first row
 
 
 
